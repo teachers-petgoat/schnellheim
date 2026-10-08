@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schnellheim</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230e1116'/%3E%3Crect x='12' y='14' width='40' height='32' rx='6' fill='%23ffd23f'/%3E%3Crect x='16' y='19' width='32' height='13' rx='2' fill='%230e1116'/%3E%3Ccircle cx='21' cy='39' r='3' fill='%230e1116'/%3E%3Ccircle cx='43' cy='39' r='3' fill='%230e1116'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Schnellheim">
+<style>
+:root {
+	--bg: #0e1116; --card: #171c24; --ink: #f2f4f7; --mute: #98a2b3; --rule: #262d38;
+	--bay: #ffd23f; --bay-ink: #14110a; --ok: #4ade80; --late: #ff7468;
+}
+@media (prefers-color-scheme: light) {
+	:root {
+		--bg: #f4f5f7; --card: #ffffff; --ink: #101418; --mute: #5b6676; --rule: #e1e5ea;
+		--bay: #ffcc1f; --bay-ink: #14110a; --ok: #12813d; --late: #c62a1c;
+	}
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+	margin: 0; background: var(--bg); color: var(--ink);
+	font: 16px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+	font-variant-numeric: tabular-nums;
+	padding: calc(14px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+}
+main { max-width: 520px; margin: 0 auto; }
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+h1 { font-size: 20px; line-height: 1.2; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+h1 span { color: var(--mute); font-weight: 500; }
+#status { margin: 4px 0 0; font-size: 13px; color: var(--mute); }
+#status.warn { color: var(--late); }
+button#reload {
+	flex: none; appearance: none; border: 1px solid var(--rule); background: var(--card); color: var(--ink);
+	font: inherit; font-size: 14px; padding: 9px 14px; border-radius: 999px; cursor: pointer;
+}
+button#reload:active { opacity: 0.6; }
+
+ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+li.dep {
+	display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; align-items: stretch;
+	background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 12px;
+}
+.bay {
+	display: flex; flex-direction: column; align-items: center; justify-content: center;
+	background: var(--bay); color: var(--bay-ink); border-radius: 12px; min-height: 76px; padding: 6px 4px;
+}
+.bay small { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.75; }
+.bay b { font-size: 40px; line-height: 1; font-weight: 800; }
+.bay.unknown { background: transparent; color: var(--mute); border: 1px dashed var(--mute); }
+.bay.unknown b { font-size: 30px; }
+
+.info { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.count { font-size: 26px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+.line {
+	flex: none; font-size: 15px; font-weight: 700; padding: 3px 9px; border-radius: 8px;
+	border: 1.5px solid var(--ink);
+}
+.times { font-size: 15px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.times s { color: var(--mute); }
+.times .late { color: var(--late); font-weight: 650; }
+.times .ok { color: var(--ok); font-weight: 600; }
+.times .plan { color: var(--mute); }
+.dir, .via { font-size: 13.5px; color: var(--mute); overflow-wrap: anywhere; }
+
+li.dep.first { padding: 14px; border-color: var(--bay); }
+li.dep.first .count { font-size: 36px; }
+li.dep.first .bay { min-height: 92px; }
+li.dep.first .bay b { font-size: 50px; }
+
+li.dep.cancelled .bay { background: transparent; color: var(--mute); border: 1px solid var(--rule); }
+li.dep.cancelled .count { color: var(--late); font-size: 22px; }
+li.dep.cancelled .line, li.dep.cancelled .dir { text-decoration: line-through; color: var(--mute); border-color: var(--mute); }
+
+.msg { background: var(--card); border: 1px solid var(--rule); border-radius: 18px; padding: 22px 18px; color: var(--mute); }
+.msg strong { display: block; color: var(--ink); font-size: 17px; margin-bottom: 4px; }
+footer { margin-top: 16px; font-size: 12px; color: var(--mute); }
+#debug {
+	margin: 16px 0 0; padding: 12px; background: var(--card); border: 1px solid var(--rule); border-radius: 12px;
+	font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink);
+	white-space: pre-wrap; overflow-wrap: anywhere; user-select: all;
+}
+</style>
+</head>
+<body>
+<main>
+	<header>
+		<div>
+			<h1 id="title">Tullnerfeld <span>→</span> Judenau</h1>
+			<p id="status" aria-live="polite">Lade …</p>
+		</div>
+		<button id="reload" type="button">Aktualisieren</button>
+	</header>
+	<ol id="list"></ol>
+	<footer>Daten: ÖBB-Abfahrtstafel (fahrplan.oebb.at). Der Bussteig stammt aus der Tafel, ersatzweise aus der eigenen Zuordnung.</footer>
+	<pre id="debug" hidden></pre>
+</main>
+<script>
+// ---------- Einstellungen ----------
+const CONFIG = {
+	board: 'https://fahrplan.oebb.at/bin/stboard.exe/dn', // ÖBB-Abfahrtstafel
+	stopSearch: 'https://fahrplan.oebb.at/bin/ajax-getstop.exe/dn', // ÖBB-Haltestellensuche
+	from: '8102059', // evaId der Abfahrtstafel (Tullnerfeld)
+	dest: 'Judenau', // Namensanfang oder evaId der Zielhaltestellen; mehrere mit Komma
+	productsFilter: '1111111111111',
+	maxJourneys: 50,
+	results: 3, // Anzahl fahrender Busse
+	refreshSeconds: 45,
+	charset: 'ISO-8859-1', // bei kaputten Umlauten auf '' stellen
+	platformMap: {}, // Fallback Linie -> Steig, z. B. {'410': 'C', '409': 'A'}
+};
+// URL-Schalter: ?demo  Beispieldaten · ?debug  Rohdaten anzeigen · ?reset  Zielhaltestellen neu suchen
+
+const params = new URLSearchParams(location.search);
+const DEMO = params.has('demo');
+const DEBUG = params.has('debug');
+if (params.get('board')) CONFIG.board = params.get('board');
+if (params.get('search')) CONFIG.stopSearch = params.get('search');
+
+const STALE_MS = 10 * 60 * 1000;
+
+const list = document.getElementById('list');
+const statusEl = document.getElementById('status');
+const debugEl = document.getElementById('debug');
+const clock = new Intl.DateTimeFormat('de-AT', {hour: '2-digit', minute: '2-digit'});
+
+// ---------- Speicher (nur Komfort: gemerkte Zielhaltestellen) ----------
+const store = {
+	get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+	set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* egal */ } },
+	del(k) { try { localStorage.removeItem(k); } catch { /* egal */ } },
+};
+const DESTS_KEY = 'schnellheim:dests:' + [CONFIG.stopSearch, CONFIG.dest].join('|');
+if (params.has('reset')) store.del(DESTS_KEY);
+
+// ---------- ÖBB-Abfrage ----------
+// Die Auskunft antwortet mit JavaScript ("journeysObj = {…}"). Das lässt sich als
+// <script> laden und braucht deshalb keine CORS-Freigabe. Immer nur eine Abfrage zugleich,
+// weil alle Antworten in dieselbe globale Variable schreiben.
+let queue = Promise.resolve();
+const loadScript = (url, read) => {
+	const job = queue.then(() => new Promise((resolve, reject) => {
+		const s = document.createElement('script');
+		let timer = null;
+		const finish = (fn, value) => {
+			clearTimeout(timer);
+			s.remove();
+			fn(value);
+		};
+		timer = setTimeout(() => finish(reject, new Error('Zeitüberschreitung bei der ÖBB-Abfrage')), 12000);
+		if (CONFIG.charset) s.charset = CONFIG.charset;
+		s.onload = () => {
+			try {
+				finish(resolve, read());
+			} catch (err) {
+				finish(reject, err);
+			}
+		};
+		s.onerror = () => finish(reject, new Error('ÖBB-Auskunft nicht erreichbar oder Antwort vom Browser blockiert'));
+		s.src = url;
+		document.head.append(s);
+	}));
+	queue = job.catch(() => {});
+	return job;
+};
+
+const pad = n => String(n).padStart(2, '0');
+const nowHHMM = () => {
+	const d = new Date();
+	return pad(d.getHours()) + ':' + pad(d.getMinutes());
+};
+
+const loadBoard = dirInput => {
+	const q = new URLSearchParams({
+		L: 'vs_liveticker',
+		evaId: CONFIG.from,
+		boardType: 'dep',
+		time: nowHHMM(),
+		productsFilter: CONFIG.productsFilter,
+		additionalTime: '0',
+		maxJourneys: String(CONFIG.maxJourneys),
+		outputMode: 'tickerDataOnly',
+		start: 'yes',
+		selectDate: 'today',
+	});
+	if (dirInput) q.set('dirInput', dirInput); // nur Fahrten, die dort halten
+	q.set('_', String(Date.now()));
+	window.journeysObj = undefined;
+	return loadScript(CONFIG.board + '?' + q, () => {
+		const board = window.journeysObj;
+		window.journeysObj = undefined;
+		if (!board || typeof board !== 'object') throw new Error('Unerwartete Antwort der ÖBB-Abfahrtstafel');
+		return board;
+	});
+};
+
+const searchStops = name => {
+	window.SLs = {sls: null, showSuggestion() {}};
+	const url = CONFIG.stopSearch + '?REQ0JourneyStopsS0A=1&REQ0JourneyStopsB=12&S='
+		+ encodeURIComponent(name + '?') + '&js=true&_=' + Date.now();
+	return loadScript(url, () => {
+		const found = window.SLs && window.SLs.sls && window.SLs.sls.suggestions;
+		if (!Array.isArray(found)) throw new Error('Unerwartete Antwort der ÖBB-Haltestellensuche');
+		return found;
+	});
+};
+
+// Namen kommen teils mit HTML-Entities (&#223;) und doppelten Leerzeichen.
+const entityBox = document.createElement('textarea');
+const text = s => {
+	if (s == null) return '';
+	entityBox.innerHTML = String(s);
+	return entityBox.value.replace(/\s+/g, ' ').trim();
+};
+const norm = s => String(s).toLowerCase().replace(/ß/g, 'ss').replace(/[^a-z0-9äöü]/g, '');
+const isId = s => /^\d{6,}$/.test(s);
+
+let dests = null; // [{id, name, short}]
+const resolveDests = async () => {
+	if (dests) return dests;
+	const cached = store.get(DESTS_KEY);
+	if (Array.isArray(cached) && cached.length) return dests = cached;
+
+	const out = [];
+	for (const part of CONFIG.dest.split(',').map(s => s.trim()).filter(Boolean)) {
+		if (isId(part)) {
+			out.push({id: part, name: part, short: part});
+			continue;
+		}
+		for (const s of await searchStops(part)) {
+			const name = text(s.value);
+			const id = String(s.extId || '').replace(/^0+/, '');
+			if (String(s.type) !== '1' || !id || !norm(name).startsWith(norm(part))) continue;
+			if (out.some(d => d.id === id)) continue;
+			const rest = name.slice(part.length).replace(/^[\s,/-]+/, '');
+			out.push({id, name, short: rest || name});
+		}
+	}
+	if (!out.length) throw new Error('keine Haltestelle für "' + CONFIG.dest + '" gefunden');
+	dests = out.slice(0, 6);
+	store.set(DESTS_KEY, dests);
+	return dests;
+};
+
+const parseWhen = (da, ti) => {
+	const d = /^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/.exec(String(da || '').trim());
+	const t = /^(\d{1,2}):(\d{2})/.exec(String(ti || '').trim());
+	if (!d || !t) return null;
+	const year = d[3].length === 2 ? 2000 + Number(d[3]) : Number(d[3]);
+	return new Date(year, Number(d[2]) - 1, Number(d[1]), Number(t[1]), Number(t[2]));
+};
+
+const toItem = j => {
+	const planned = parseWhen(j.da, j.ti);
+	if (!planned) return null;
+	const rt = j.rt && typeof j.rt === 'object' ? j.rt : null;
+	const cancelled = Boolean(rt && /ausfall|cancel/i.test(String(rt.status || '')));
+
+	let when = planned;
+	let delayMin = null; // null = keine Echtzeitangabe
+	if (rt && !cancelled) {
+		let actual = parseWhen(rt.dld || j.da, rt.dlt);
+		if (actual && actual - planned < -12 * 3600000) actual = new Date(actual.getTime() + 24 * 3600000);
+		const dlm = parseInt(rt.dlm, 10);
+		if (actual) {
+			when = actual;
+			delayMin = Math.round((actual - planned) / 60000);
+		} else if (!Number.isNaN(dlm)) {
+			when = new Date(planned.getTime() + dlm * 60000);
+			delayMin = dlm;
+		}
+	}
+
+	const product = text(j.pr);
+	const line = product.replace(/^(bus|ast|rufbus)\s+/i, '') || '?';
+	const track = text(j.tr).replace(/^(bus)?steig\s*/i, '');
+	return {
+		product,
+		line,
+		direction: text(j.lastStop) || text(j.st),
+		when: when.toISOString(),
+		plannedWhen: planned.toISOString(),
+		delayMin,
+		cancelled,
+		via: [],
+		platform: track || (CONFIG.platformMap[line] ? String(CONFIG.platformMap[line]) : null),
+	};
+};
+
+const isBus = item => /^(bus|ast|rufbus)\b/i.test(item.product);
+
+let debug = {};
+const fetchLive = async () => {
+	let note = null;
+	let targets = [];
+	try {
+		targets = await resolveDests();
+	} catch (err) {
+		note = 'ohne Filter nach ' + CONFIG.dest + ' (' + (err.message || err) + ')';
+	}
+
+	const byTrip = new Map();
+	const raw = [];
+	let station = null;
+	const collect = (board, via) => {
+		station = text(board.stationName) || station;
+		for (const j of Array.isArray(board.journey) ? board.journey : []) {
+			if (raw.length < 8) raw.push(j);
+			const item = toItem(j);
+			if (!item) continue;
+			const key = [item.product, item.plannedWhen, item.direction].join('|');
+			if (!byTrip.has(key)) byTrip.set(key, item);
+			if (via) byTrip.get(key).via.push(via);
+		}
+	};
+
+	if (targets.length) {
+		const settled = await Promise.allSettled(targets.map(d => loadBoard(d.id)));
+		if (settled.every(s => s.status === 'rejected')) throw settled[0].reason;
+		settled.forEach((s, i) => {
+			if (s.status === 'fulfilled') collect(s.value, targets[i].short);
+		});
+	} else {
+		// Ohne Zielhaltestellen: alle Busse der Tafel zeigen, statt gar nichts.
+		collect(await loadBoard(null), null);
+		const buses = [...byTrip].filter(([, item]) => isBus(item));
+		if (buses.length) {
+			byTrip.clear();
+			buses.forEach(([k, v]) => byTrip.set(k, v));
+		}
+	}
+
+	const sorted = [...byTrip.values()]
+		.filter(d => Date.parse(d.when) > Date.now() - 60000)
+		.sort((a, b) => Date.parse(a.when) - Date.parse(b.when));
+
+	// CONFIG.results fahrende Busse; ausgefallene dazwischen bleiben sichtbar.
+	const out = [];
+	let running = 0;
+	for (const d of sorted) {
+		out.push(d);
+		if (!d.cancelled && ++running >= CONFIG.results) break;
+	}
+	debug = {tafel: station, evaId: CONFIG.from, ziele: targets, hinweis: note, roh: raw};
+	return {dest: CONFIG.dest, departures: out, note};
+};
+
+// Beispieldaten für ?demo – Linien und Steige sind erfunden.
+const fetchDemo = async () => {
+	const at = min => new Date(Math.floor(Date.now() / 60000) * 60000 + min * 60000).toISOString();
+	const mk = (line, direction, plan, delay, platform, extra) => Object.assign({
+		line, direction, when: at(plan + (delay || 0)), plannedWhen: at(plan),
+		delayMin: delay, cancelled: false, via: ['Schloßplatz', 'Florianipark'], platform,
+	}, extra);
+	return {
+		dest: CONFIG.dest,
+		departures: [
+			mk('410', 'Tulln Schubertpark', 4, 2, 'C'),
+			mk('409', 'Sieghartskirchen Karl-Berger-Platz', 11, null, 'A', {cancelled: true, via: ['Florianipark']}),
+			mk('410', 'Tulln Schubertpark', 23, 0, 'C'),
+			mk('409', 'Sieghartskirchen Karl-Berger-Platz', 41, null, 'A', {via: ['Florianipark']}),
+		],
+	};
+};
+
+// ---------- Anzeige ----------
+let data = null; // {dest, departures, updatedAt}
+let failure = null;
+
+const el = (tag, cls, text) => {
+	const e = document.createElement(tag);
+	if (cls) e.className = cls;
+	if (text != null) e.textContent = text;
+	return e;
+};
+
+const countdown = ms => {
+	if (ms < 60000) return 'jetzt';
+	const min = Math.floor(ms / 60000);
+	if (min < 60) return 'in ' + min + ' min';
+	return 'in ' + Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0');
+};
+
+const card = (d, isFirst) => {
+	const li = el('li', 'dep' + (isFirst ? ' first' : '') + (d.cancelled ? ' cancelled' : ''));
+
+	const bay = el('div', 'bay' + (d.platform ? '' : ' unknown'));
+	bay.append(el('small', null, 'Steig'), el('b', null, d.platform || '?'));
+	bay.setAttribute('aria-label', d.platform ? 'Bussteig ' + d.platform : 'Bussteig unbekannt');
+
+	const info = el('div', 'info');
+	const top = el('div', 'top');
+	top.append(
+		el('span', 'count', d.cancelled ? 'fällt aus' : countdown(Date.parse(d.when) - Date.now())),
+		el('span', 'line', d.line),
+	);
+
+	const times = el('div', 'times');
+	const late = d.delayMin != null && d.delayMin > 0;
+	if (late && !d.cancelled) {
+		times.append(
+			el('s', null, clock.format(new Date(d.plannedWhen))),
+			el('span', null, clock.format(new Date(d.when))),
+			el('span', 'late', '+' + d.delayMin + ' min'),
+		);
+	} else {
+		times.append(el('span', null, clock.format(new Date(d.plannedWhen))));
+		if (!d.cancelled) {
+			times.append(d.delayMin == null
+				? el('span', 'plan', 'laut Fahrplan')
+				: el('span', 'ok', 'pünktlich'));
+		}
+	}
+
+	info.append(top, times, el('div', 'dir', '→ ' + d.direction));
+	if (d.via && d.via.length) info.append(el('div', 'via', 'hält: ' + d.via.join(' · ')));
+
+	li.append(bay, info);
+	return li;
+};
+
+const message = (title, text) => {
+	const li = el('li', 'msg');
+	li.append(el('strong', null, title), document.createTextNode(text));
+	return li;
+};
+
+const render = () => {
+	list.replaceChildren();
+
+	if (DEBUG) {
+		debugEl.hidden = false;
+		debugEl.textContent = JSON.stringify(Object.assign({fehler: failure}, debug), null, 1);
+	}
+
+	if (!data) {
+		if (failure) list.append(message('Keine Daten', failure));
+		statusEl.textContent = failure ? 'Fehler beim Laden' : 'Lade …';
+		statusEl.className = failure ? 'warn' : '';
+		return;
+	}
+
+	const upcoming = data.departures.filter(d => d.cancelled || Date.parse(d.when) > Date.now() - 30000);
+	if (!upcoming.length) {
+		list.append(message('Kein Bus in Sicht', 'Die Abfahrtstafel zeigt derzeit keinen Bus nach ' + data.dest + '.'));
+	}
+	let firstDone = false;
+	for (const d of upcoming) {
+		const isFirst = !d.cancelled && !firstDone;
+		if (isFirst) firstDone = true;
+		list.append(card(d, isFirst));
+	}
+
+	const parts = ['Stand ' + clock.format(new Date(data.updatedAt))];
+	if (DEMO) parts.push('DEMO-DATEN');
+	if (data.note) parts.push(data.note);
+	if (failure) parts.push('nicht aktuell – ' + failure);
+	statusEl.textContent = parts.join(' · ');
+	statusEl.className = failure || data.note ? 'warn' : '';
+};
+
+let loading = false;
+const load = async () => {
+	if (loading) return;
+	loading = true;
+	try {
+		const fresh = await (DEMO ? fetchDemo() : fetchLive());
+		data = Object.assign(fresh, {updatedAt: new Date().toISOString()});
+		failure = null;
+	} catch (err) {
+		failure = err.message || String(err);
+		if (data && Date.now() - Date.parse(data.updatedAt) > STALE_MS) data = null;
+	} finally {
+		loading = false;
+	}
+	render();
+};
+
+document.getElementById('reload').addEventListener('click', load);
+document.addEventListener('visibilitychange', () => {
+	if (document.visibilityState === 'visible') load();
+});
+setInterval(() => {
+	if (document.visibilityState === 'visible') load();
+}, CONFIG.refreshSeconds * 1000);
+setInterval(render, 10000);
+load();
+</script>
+</body>
+</html>
